@@ -3,18 +3,24 @@ import streamlit as st
 import sqlparse
 from sql_metadata.parser import Parser #gives a quick way to get the tables, columns, and aliases from an SQL query. not perfect
 
-'''default query 
+'''
+default query 
+
 SELECT count(*) from ((SELECT a.id, a.fname, a.lname FROM actor a) 
 EXCEPT (SELECT DISTINCT ac.id, ac.fname, ac.lname FROM actor_casts ac 
 JOIN genre g ON ac.mid = g.mid JOIN directed d ON d.mid = ac.mid WHERE
  g.genre = \'Action\' AND d.fname = \'Steven\' AND d.lname = \'Spielberg\'));
 '''
 
+#testing database connection-------------------------------------------------------------------------------------------------------------------------------------
+# connection = psycopg2.connect(database="", user="", password="", host="", port=)
 # cursor = connection.cursor()
 # cursor.execute("SELECT count(*) from ((SELECT a.id, a.fname, a.lname FROM actor a) EXCEPT (SELECT DISTINCT ac.id, ac.fname, ac.lname FROM actor_casts ac JOIN genre g ON ac.mid = g.mid JOIN directed d ON d.mid = ac.mid WHERE g.genre = \'Action\' AND d.fname = \'Steven\' AND d.lname = \'Spielberg\'));")
 # all_rows = cursor.fetchall()
 # print(f"Fetched all rows: {all_rows}")
 
+
+#get query tokens and values with sqlparse and sql_metadata.parser-------------------------------------------------------------------------------------------------------------------------------------
 def get_query_tokens_and_vals(query):
     parser = Parser(query)
     parsed_query = sqlparse.parse(query)
@@ -28,7 +34,29 @@ def get_query_tokens_and_vals(query):
                 print(f"Token: {repr(token.normalized)}, Type: {token.ttype}")
     return tokens, vals, parser
 
-def extract_where_conditions(tokens, vals):
+#looking at parser results-------------------------------------------------------------------------------------------------------------------------------------
+base_query = "SELECT count(*) from ((SELECT a.id, a.fname, a.lname FROM actor a) EXCEPT (SELECT DISTINCT ac.id, ac.fname, ac.lname FROM actor_casts ac JOIN genre g ON ac.mid = g.mid JOIN directed d ON d.mid = ac.mid WHERE g.genre = \'Action\' AND d.fname = \'Steven\' AND d.lname = \'Spielberg\'));"
+# mod_base_query = "(SELECT DISTINCT ac.id, ac.fname, ac.lname FROM actor_casts ac JOIN genre g ON ac.mid = g.mid JOIN directed d ON d.mid = ac.mid WHERE g.genre = \'Action\' AND d.fname = \'Steven\' AND d.lname = \'Spielberg\');"
+failed_alias_example = 'SELECT a.uniquely_named_col_from_a, b.uniquely_named_col_from_b FROM a JOIN b ON a.id = b.id;' #example where the parser retrieves aliases that do not exist
+
+tokens, vals, parser = get_query_tokens_and_vals(base_query)
+print(tokens)
+print(vals)
+print(f"Tables found: {parser.tables}")
+print(f"Columns found: {parser.columns}")
+print(f"Table aliases: {parser.tables_aliases}")
+
+print()
+
+tokens, vals, parser = get_query_tokens_and_vals(failed_alias_example)
+print(tokens)
+print(vals)
+print(f"Tables found: {parser.tables}")
+print(f"Columns found: {parser.columns}")
+print(f"Table aliases: {parser.tables_aliases}")
+
+#unfinished function for extracting where clause filters-------------------------------------------------------------------------------------------------------------------------------------
+def extract_where_filters(tokens, vals):
     conditions = []
     relns = []
     base_relns = {}
@@ -48,21 +76,11 @@ def extract_where_conditions(tokens, vals):
                 base_relns[vals[i]] = vals[i]
                 base_relns[vals[i+2]] = vals[i]
 
-
-
-sql = "SELECT count(*) from ((SELECT a.id, a.fname, a.lname FROM actor a) EXCEPT (SELECT DISTINCT ac.id, ac.fname, ac.lname FROM actor_casts ac JOIN genre g ON ac.mid = g.mid JOIN directed d ON d.mid = ac.mid WHERE g.genre = \'Action\' AND d.fname = \'Steven\' AND d.lname = \'Spielberg\'));"
-sql = "(SELECT DISTINCT ac.id, ac.fname, ac.lname FROM actor_casts ac JOIN genre g ON ac.mid = g.mid JOIN directed d ON d.mid = ac.mid WHERE g.genre = \'Action\' AND d.fname = \'Steven\' AND d.lname = \'Spielberg\');"
-# sql = 'SELECT a.uniquely_named_col_from_a, b.uniquely_named_col_from_b FROM a JOIN b ON a.id = b.id;' #example where the parser retrieves aliases that do not exist
-# extracted_conditions = extract_where_conditions(sql)
+#looking at where clause filtering results-------------------------------------------------------------------------------------------------------------------------------------
+# extracted_conditions = extract_where_filters(base_query)
 # print(extracted_conditions)
-tokens, vals, parser = get_query_tokens_and_vals(sql)
-print(tokens)
-print(vals)
-print(f"Tables found: {parser.tables}")
-print(f"Columns found: {parser.columns}") # This is a list of all columns
-print(f"Table aliases: {parser.tables_aliases}")
-# print(tokens)
 
+#try to get a default streamlit page to work-------------------------------------------------------------------------------------------------------------------------------------
 # st.title("Hello Streamlit-er 👋")
 # st.markdown(
 #     """ 
